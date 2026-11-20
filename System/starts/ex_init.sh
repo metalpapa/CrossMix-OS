@@ -6,10 +6,9 @@ mkdir -p ~/.config/
 
 /mnt/SDCARD/System/bin/ex_update.sh
 
-if [[ "$NETWORK_SSH" == "Y" ]]; then
+SSH_enabled=$(/mnt/SDCARD/System/bin/jq -r '.["SSH"]//0' "$EX_CONFIG_PATH/crossmix.json")
+if [ "$SSH_enabled" -eq 1 ]; then
     mkdir -p /etc/dropbear
-
-    # Currently broken
     nice -2 dropbear -R
 fi
 

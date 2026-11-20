@@ -23,7 +23,6 @@ fi
 /mnt/SDCARD/System/bin/jq '. += {"SSH": 0}' "$json_file" >"/tmp/json_file.tmp" && mv "/tmp/json_file.tmp" "$json_file"
 
 pkill dropbear
-sed -i 's/export NETWORK_SSH="Y"/export NETWORK_SSH="N"/' /mnt/SDCARD/System/etc/ex_config
 
 # we modify the DB entries to reflect the current state
 /mnt/SDCARD/System/usr/trimui/scripts/mainui_state_update.sh "SSH" "disabled"
