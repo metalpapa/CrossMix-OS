@@ -69,17 +69,13 @@ font_file="/mnt/SDCARD/System/resources/DejaVuSans.ttf"
 font_size=35
 color="220,220,220"
 
-Current_Theme=$(basename "$(/usr/trimui/bin/systemval theme)")
+Current_Theme=$(/usr/trimui/bin/systemval theme)
+Current_Theme=${Current_Theme##*/}
 if [ "$Current_Theme" = "res" ]; then
     Current_Theme="CrossMix - OS"
 fi
 CrossMix_Style=$(/mnt/SDCARD/System/bin/jq -r '.["CROSSMIX STYLE"]' "/mnt/SDCARD/System/etc/crossmix.json")
-
-# Determine font path : by default we take the one from the current theme
-Current_font=$(/mnt/SDCARD/System/bin/jq -r '.["font"]' "/mnt/SDCARD/Themes/$Current_Theme/config.json")
-if [ -f "/mnt/SDCARD/Themes/$Current_Theme/$Current_font" ]; then
-    font_file="/mnt/SDCARD/Themes/$Current_Theme/$Current_font"
-fi
+ff_provided=false
 
 # Display usage if no parameters or -h is specified
 if [ $# -eq 0 ]; then
@@ -116,6 +112,7 @@ while [ "$#" -gt 0 ]; do
     -ff)
         if [ -f "$2" ]; then
             font_file="$2"
+            ff_provided=true
         else
             echo "Font file $2 does not exist. Using default."
         fi
@@ -136,6 +133,15 @@ while [ "$#" -gt 0 ]; do
     *) shift ;;
     esac
 done
+
+# Determine font path : by default we take the one from the current theme.
+# Skipped entirely if the caller already provided a valid -ff font file.
+if [ "$ff_provided" != "true" ]; then
+    Current_font=$(/mnt/SDCARD/System/bin/jq -r '.["font"]' "/mnt/SDCARD/Themes/$Current_Theme/config.json")
+    if [ -f "/mnt/SDCARD/Themes/$Current_Theme/$Current_font" ]; then
+        font_file="/mnt/SDCARD/Themes/$Current_Theme/$Current_font"
+    fi
+fi
 
 # Function to determine the image path
 determine_image_path() {
@@ -195,7 +201,11 @@ touch /var/trimui_inputd/sticks_disabled
 # Function to handle the timer
 handle_timer() {
     if [ -n "$timer" ]; then
-        sleep 1
+        # Small buffer so the async sdl2imgshow process below has time to
+        # actually render before we start counting down the requested
+        # duration. Was a flat 1s; trimmed to 0.2s -- if messages start
+        # flashing/disappearing too fast on real hardware, bump this back up.
+        sleep 0.2
         sleep "$timer"
         for pid in $(pgrep -f getkey.sh); do pkill -TERM -P $pid; done
     fi
