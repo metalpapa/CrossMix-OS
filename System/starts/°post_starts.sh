@@ -18,6 +18,7 @@ eval $(
         SmartLed_enabled=\(.["SMARTLED"]//0)
         StartupApp=\(.["STARTUP APP"]//"MainUI")
         CheckUpdate=\(.["CHECK UPDATE"]//1)
+        Avahi_enabled=\(.["Avahi"]//1)
         "' "/mnt/SDCARD/System/etc/crossmix.json"
 )
 
@@ -40,13 +41,13 @@ start_thd_listener() {
 start_thd_listener
 
 VNC_wait_for_MainUI() {
-	timeout=10
-	elapsed=0
+	timeout_cs=1000 # 10 seconds, in centiseconds
+	elapsed_cs=0
 	while ! pgrep -x "MainUI" >/dev/null; do
 		sleep 0.5
-		elapsed=$(echo "$elapsed + 0.5" | bc)
-		if [ "$(echo "$elapsed >= $timeout" | bc)" -eq 1 ]; then
-			echo "Error: MainUI did not start within $timeout seconds."
+		elapsed_cs=$((elapsed_cs + 50))
+		if [ "$elapsed_cs" -ge "$timeout_cs" ]; then
+			echo "Error: MainUI did not start within 10 seconds."
 			return 1
 		fi
 	done
@@ -159,7 +160,9 @@ if [ "$VNC_enabled" -eq 1 ]; then
 	VNC_wait_for_MainUI &
 fi
 
-/usr/sbin/avahi-daemon --file=/mnt/SDCARD/System/etc/avahi/avahi-daemon.conf --no-drop-root -D &
+if [ "$Avahi_enabled" -eq 1 ]; then
+	/usr/sbin/avahi-daemon --file=/mnt/SDCARD/System/etc/avahi/avahi-daemon.conf --no-drop-root -D &
+fi
 
 if [ "$IngameMenu_enabled" -eq 0 ]; then
 	mkdir -p /tmp/trimui_ra64/
