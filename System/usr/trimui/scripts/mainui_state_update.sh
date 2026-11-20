@@ -27,9 +27,13 @@ mainui_state_update() {
         database_file="/mnt/SDCARD/Apps/Scraper/Menu/Menu_cache7.db"
     fi
 
+    # Escape single quotes for safe SQL interpolation (' -> '')
+    local label_sql=${label_str//\'/\'\'}
+    local value_sql=${value_str//\'/\'\'}
+
     sqlite3 "$database_file" <<EOF
-UPDATE Menu_roms SET disp = '$label_str ($value_str)', pinyin = '$label_str ($value_str)', cpinyin = '$label_str ($value_str)', opinyin = '$label_str ($value_str)' WHERE disp LIKE '$label_str (%)';
-UPDATE Menu_roms SET ppath = '$label_str ($value_str)' WHERE ppath LIKE '$label_str (%)';
+UPDATE Menu_roms SET disp = '$label_sql ($value_sql)', pinyin = '$label_sql ($value_sql)', cpinyin = '$label_sql ($value_sql)', opinyin = '$label_sql ($value_sql)' WHERE disp LIKE '$label_sql (%)';
+UPDATE Menu_roms SET ppath = '$label_sql ($value_sql)' WHERE ppath LIKE '$label_sql (%)';
 EOF
 
     # Update the state.json file if it exists
@@ -40,7 +44,6 @@ EOF
             "$json_file" >"$json_file.tmp" && mv "$json_file.tmp" "$json_file"
     fi
     sync
-    sleep 0.1
 }
 
 mainui_state_update "$1" "$2"
