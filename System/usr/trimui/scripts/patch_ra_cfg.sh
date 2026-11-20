@@ -40,48 +40,52 @@ while IFS='=' read -r key patch_value; do
     escaped_key=$(escape_sed "$key")
 
     # Check if the key already exists in the target file
-    if grep -q "^$escaped_key[ ]*=" "$TARGET_FILE"; then
-        # Extract the existing line
-        line=$(grep "^$escaped_key[ ]*=" "$TARGET_FILE")
-
+    line=$(grep "^$escaped_key[ ]*=" "$TARGET_FILE")
+    if [ -n "$line" ]; then
         # Preserve spaces around the `=` and quotes if present
-        echo "$line" | grep -q ' =' && spaces_before_equals=" " || spaces_before_equals=""
-        echo "$line" | grep -q '= ' && spaces_after_equals=" " || spaces_after_equals=""
+        case "$line" in *' ='*) spaces_before_equals=" " ;; *) spaces_before_equals="" ;; esac
+        case "$line" in *'= '*) spaces_after_equals=" " ;; *) spaces_after_equals="" ;; esac
 
-        if echo "$line" | grep -q '"'; then
+        case "$line" in
+        *'"'*)
             # Syntax with quotes
-            # formatted_value="\"$(echo "$patch_value" | sed 's/^\"//;s/\"$//')\""
             formatted_value="$patch_value"
-        else
+            ;;
+        *)
             # Syntax without quotes
             formatted_value=$(echo "$patch_value" | sed 's/^\"//;s/\"$//')
-        fi
+            ;;
+        esac
 
         # Replace in the target file with the preserved syntax
 sed -i "s|^$escaped_key[ ]*=.*|$key$spaces_before_equals=$spaces_after_equals$formatted_value|" "$TARGET_FILE"
-    elif grep -m1 '=' "$TARGET_FILE"; then
-        # If the key is not found, take a random line containing an `=`
+    else
         line=$(grep -m1 '=' "$TARGET_FILE")
+        if [ -n "$line" ]; then
+        # If the key is not found, take a random line containing an `=`
 
         # Preserve spaces around the `=` and quotes if present
-        echo "$line" | grep -q ' =' && spaces_before_equals=" " || spaces_before_equals=""
-        echo "$line" | grep -q '= ' && spaces_after_equals=" " || spaces_after_equals=""
+        case "$line" in *' ='*) spaces_before_equals=" " ;; *) spaces_before_equals="" ;; esac
+        case "$line" in *'= '*) spaces_after_equals=" " ;; *) spaces_after_equals="" ;; esac
 
-        if echo "$line" | grep -q '"'; then
+        case "$line" in
+        *'"'*)
             # Syntax with quotes
-            # formatted_value="\"$(echo "$patch_value" | sed 's/^\"//;s/\"$//')\""
             formatted_value="$patch_value"
-        else
+            ;;
+        *)
             # Syntax without quotes
             formatted_value=$(echo "$patch_value" | sed 's/^\"//;s/\"$//')
 			formatted_value="$patch_value"
-        fi
+            ;;
+        esac
 
         # Add the key/value with the format found
         echo "$key$spaces_before_equals=$spaces_after_equals$formatted_value" >> "$TARGET_FILE"
     else
         # If no line contains a `=`, add a new line with the default format
         echo "$Fulline" >> "$TARGET_FILE"
+    fi
     fi
 	count=$((count + 1))
 done < "$PATCH_FILE"
